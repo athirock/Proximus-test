@@ -175,7 +175,7 @@
   .plan-negotiated{color:#c0392b;font-weight:700;font-size:13px;}
   .plan-fee-note{font-size:14px;line-height:21px;color:var(--text-dim);}
   .plan-attrs-row{display:flex;padding-left:40px;flex-wrap:nowrap;row-gap:16px;align-items:flex-start;}
-  .plan-attr{display:flex;gap:10px;padding:0 16px;align-items:flex-start;min-width:0;}
+  .plan-attr{display:flex;gap:10px;padding:0 18px;align-items:flex-start;min-width:0;}
   .plan-attr:first-child{padding-left:0;}
   .plan-attr:not(:first-child){border-left:1px solid var(--border);}
   .plan-attr:last-child{margin-left:auto;}
