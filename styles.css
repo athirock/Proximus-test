@@ -160,7 +160,7 @@
   .plan-row:last-child{margin-bottom:0;}
   .plan-row:hover, .plan-row.selected{border:3px solid var(--purple);}
   .plan-info{flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:16px;}
-  .plan-header{display:flex;gap:16px;align-items:center;}
+  .plan-header{display:flex;gap:16px;align-items:flex-start;}
   .plan-radio{
     width:24px;height:24px;border-radius:50%;border:2px solid rgba(0,0,0,.56);flex-shrink:0;
     display:flex;align-items:center;justify-content:center;background:#fff;
@@ -174,13 +174,14 @@
   .plan-name{font-weight:700;font-size:16px;line-height:24px;color:#252525;}
   .plan-negotiated{color:#c0392b;font-weight:700;font-size:13px;}
   .plan-fee-note{font-size:14px;line-height:21px;color:var(--text-dim);}
-  .plan-attrs-row{display:flex;padding-left:40px;flex-wrap:wrap;row-gap:16px;}
-  .plan-attr{display:flex;gap:10px;padding:0 20px;align-items:flex-start;}
+  .plan-attrs-row{display:flex;padding-left:40px;flex-wrap:nowrap;row-gap:16px;align-items:flex-start;}
+  .plan-attr{display:flex;gap:10px;padding:0 20px;align-items:flex-start;min-width:0;}
   .plan-attr:first-child{padding-left:0;}
   .plan-attr:not(:first-child){border-left:1px solid var(--border);}
+  .plan-attr:last-child{margin-left:auto;}
   .plan-attr-icon{width:40px;height:40px;border-radius:10px;background:#F9F9F9;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .plan-attr-icon svg{width:24px;height:24px;color:var(--purple);}
-  .plan-attr-body{display:flex;flex-direction:column;gap:2px;min-width:130px;}
+  .plan-attr-body{display:flex;flex-direction:column;gap:2px;min-width:90px;}
   .attr-line{line-height:24px;}
   .attr-line .plain{font-weight:700;font-size:16px;color:#252525;}
   .attr-line .unlimited{font-weight:700;font-size:16px;color:#016BC1;}
