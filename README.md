@@ -1,8 +1,36 @@
-# Proximus — Subscription configuration (Step 1 prototype)
+# Proximus — Subscription configuration prototype
 
-Interactive front-end-only prototype of Step 1 ("Select subscription") of the
-MyProximus Enterprise subscription-configuration flow. No backend — all plan
-data and filtering logic run client-side in `script.js`.
+Interactive front-end-only prototype of the MyProximus Enterprise
+subscription-configuration flow: **Step 1 (Select subscription)** and
+**Step 2 (Options, optional)**, unlocked in place on the same page after
+clicking "Confirm subscription". No backend — all plan data, filters and
+selection state run client-side in `script.js`.
+
+## What's in Step 2
+
+Only the **"International and roaming (outside EU) options"** accordion is
+built out in full (recurring roaming with quantity 1–20, daily roaming,
+recurring international), matching the reference screenshot. The other five
+accordions (Data options in Belgium and EU, Barrings, National surf limit,
+Roaming surf limit, Other services) are present and expandable but show a
+placeholder note — they weren't in scope for this round.
+
+## Known assumptions / things to double-check
+
+- Recurring roaming cards start **unchecked** (the reference screenshot showed
+  a live customer's already-active options — a fresh "select options" wizard
+  seemed like the more useful state to test from).
+- "Belgium & EU" and "Negotiated" filter chips are real chips but will
+  currently always show "no options match" — there's no EU-zone or negotiated
+  roaming bundle in the sample data, which mirrors the real page's explanation
+  that EU-zone usage needs no roaming option.
+- All underlined destination/zone links point to the public roaming rates
+  page with a `#goodtoknow` anchor guess (to land on the "Good to know"
+  section) — the exact anchor id on the live page wasn't confirmed, so it may
+  not scroll to the right spot.
+- Selecting a daily roaming option clears any recurring roaming selections
+  and vice versa, per the real page's "activating this deactivates all other
+  roaming options" behavior.
 
 ## Files
 - `index.html` — markup

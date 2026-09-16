@@ -7,10 +7,11 @@ const ICON_CHEVRON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 const ICON_MINUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14"/></svg>`;
 const ICON_PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>`;
+const ICON_X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
 
 // Every underlined destination/zone link in Step 2 points here, landing (best-effort) on the
 // "Good to know" section of the public roaming page.
-const ROAMING_INFO_URL = 'https://www.proximus.be/en/id_cl_roaming/companies-and-public-sector/telephony-for-large-companies/mobile/roaming-rates-for-medium-and-large-companies.html#goodtoknow';
+const ROAMING_INFO_URL = 'https://www.proximus.be/en/id_cl_roaming/companies-and-public-sector/telephony-for-large-companies/mobile/roaming-rates-for-medium-and-large-companies.html#zones';
 
 // ===== Plan data =====
 const plans = [
@@ -114,13 +115,14 @@ function formatAttrValue(value){
   return `<span class="plain">${value}</span>`;
 }
 
-function footerPriceHtml(price, negotiated){
+function footerPriceHtml(price, negotiated, unit){
+  unit = unit || 'month';
   const [intPart, decPart] = price.replace('€','').split('.');
   return `
   <div class="plan-footer-price${negotiated?' negotiated':''}">
     <span class="price-euro">€</span><span class="price-int">${intPart}</span><span class="price-dec">.${decPart}</span>
   </div>
-  <div class="price-per">/month</div>`;
+  <div class="price-per">/${unit}</div>`;
 }
 
 function attrHtml(a){
@@ -135,10 +137,12 @@ function attrHtml(a){
   </div>`;
 }
 
-function planRowHtml(p){
-  const isSel = selectedPlan===p.id;
+function planRowHtml(p, opts){
+  opts = opts || {};
+  const isSel = opts.readonly ? true : selectedPlan===p.id;
+  const clickAttr = opts.readonly ? '' : ` onclick="selectPlan('${p.id}')"`;
   return `
-  <div class="plan-row${isSel?' selected':''}" onclick="selectPlan('${p.id}')">
+  <div class="plan-row${isSel?' selected':''}${opts.readonly?' readonly':''}"${clickAttr}>
     <div class="plan-info">
       <div class="plan-header">
         <div class="plan-radio${isSel?' selected':''}"><div class="dot"></div></div>
@@ -194,17 +198,34 @@ function renderStep1Picker(){
 function renderStep1Summary(){
   const plan = plans.find(p=>p.id===selectedPlan);
   document.getElementById('step1-panel').innerHTML = `
-    <div class="step1-summary">
-      <div>
-        <div class="step-label">Step 1: Subscription</div>
-        <div class="step-plan-name">${plan ? plan.name : ''}</div>
-      </div>
-      <span class="modify-link" onclick="modifySubscription()">${ICON_EDIT} Modify</span>
+    <div class="step1-summary-header">
+      <div class="step-label">Step 1: Subscription</div>
+      <span class="modify-link" onclick="modifySubscription()">Modify ${ICON_EDIT}</span>
+    </div>
+    ${plan ? planRowHtml(plan, {readonly:true}) : ''}
+  `;
+}
+
+function renderStepper(){
+  const container = document.getElementById('stepper-container');
+  if(!container) return;
+  // Step 1 = Subscription, Step 2 = Options, Step 3 not built yet in this prototype.
+  const step1Class = subscriptionConfirmed ? 'completed' : 'current';
+  const step1Content = subscriptionConfirmed ? ICON_CHECK : '1';
+  const step2Class = subscriptionConfirmed ? 'current' : 'future';
+  container.innerHTML = `
+    <div class="stepper">
+      <div class="step-circle ${step1Class}">${step1Content}</div>
+      <div class="step-line${subscriptionConfirmed?' done':''}"></div>
+      <div class="step-circle ${step2Class}">2</div>
+      <div class="step-line"></div>
+      <div class="step-circle future">3</div>
     </div>
   `;
 }
 
 function renderStep1(){
+  renderStepper();
   if(subscriptionConfirmed) renderStep1Summary();
   else renderStep1Picker();
 }
@@ -227,18 +248,32 @@ function modifySubscription(){
 }
 
 // =====================================================================
-// STEP 2: Options (optional)
+// STEP 2: Options (optional) — built from the "to-be" reference screenshots
 // =====================================================================
 
-// ----- Recurring roaming (checkbox, quantity 1-20, price scales per unit) -----
-const roamingRecurringPlans = [
-  {id:'tp-top',          name:'Travel Passport Top',          zones:['top'],       price:10.00},
-  {id:'tp-top-intense',  name:'Travel Passport Top Intense',  zones:['top'],       price:150.00},
-  {id:'tp-world',        name:'Travel Passport World',        zones:['top','row'], price:75.00},
-  {id:'ts-top',          name:'Travel Surf Top',              zones:['top'],       price:20.00},
-  {id:'ts-top-intense',  name:'Travel Surf Top Intense',      zones:['top'],       price:75.00},
-  {id:'ts-world',        name:'Travel Surf World',            zones:['top','row'], price:95.00},
-  {id:'ts-world-intense',name:'Travel Surf World Intense',    zones:['top','row'], price:295.00},
+// ----- Recurring roaming: Data + Voice + SMS (checkbox, quantity 1-20) -----
+const roamingComboPlans = [
+  {id:'tp-top',  name:'Travel Passport Top',  zones:['top'],
+    attrs:[{icon:ICON_DATA,value:'400 MB',label:'Data'},{icon:ICON_CALL,value:'400 min',label:'Calls'},{icon:ICON_SMS,value:'400 sms',label:'Messages'}],
+    price:10.00},
+  {id:'tp-world', name:'Travel Passport World', zones:['row'],
+    attrs:[{icon:ICON_DATA,value:'400 MB',label:'Data'},{icon:ICON_CALL,value:'400 min',label:'Calls'},{icon:ICON_SMS,value:'400 sms',label:'Messages'}],
+    price:75.00},
+  {id:'tp-top-intense', name:'Travel Passport Top Intense', zones:['top','row'], negotiated:true,
+    attrs:[{icon:ICON_DATA,value:'10 GB',label:'Data'},{icon:ICON_CALL,value:'1000 min',label:'Calls'},{icon:ICON_SMS,value:'1000 sms',label:'Messages'}],
+    price:150.00},
+];
+
+// ----- Recurring roaming: Only data (checkbox, quantity 1-20, 2-column grid) -----
+const roamingDataPlans = [
+  {id:'ts-top',           name:'Travel Surf Top',           zones:['top'],
+    attrs:[{icon:ICON_DATA,value:'1 GB',label:'Data'}], price:20.00},
+  {id:'ts-top-intense',   name:'Travel Surf Top Intense',   zones:['top'],
+    attrs:[{icon:ICON_DATA,value:'5 GB',label:'Data'}], price:73.00},
+  {id:'ts-world',         name:'Travel Surf World',         zones:['top','row'],
+    attrs:[{icon:ICON_DATA,value:'1 GB',label:'Data'}], price:20.00},
+  {id:'ts-world-intense', name:'Travel Surf World Intense', zones:['top','row'],
+    attrs:[{icon:ICON_DATA,value:'5 GB',label:'Data'}], price:295.00},
 ];
 
 const roamingFilterDefs = [
@@ -249,34 +284,42 @@ const roamingFilterDefs = [
 ];
 
 let roamingActiveFilters = new Set();
-let roamingSelections = {};     // id -> quantity (1-20). Absent/0 = unchecked.
-let roamingStepperOpenId = null; // which card currently shows the +/- stepper
+let roamingSelections = {}; // id -> quantity (1-20). Absent/0 = unchecked.
 
 // ----- Daily roaming (radio, single-select, mutually exclusive with recurring roaming) -----
 const dailyRoamingOptions = [
-  {id:'daily-passport', name:'Daily Travel Passport'},
-  {id:'daily-surf-comfort', name:'Daily Travel Surf Comfort'},
-  {id:'daily-surf', name:'Daily Travel Surf'},
+  {id:'daily-passport', name:'Daily Travel Passport', zones:['top'],
+    attrs:[{icon:ICON_DATA,value:'160 MB',label:'Data'},{icon:ICON_CALL,value:'40 min',label:'Calls'},{icon:ICON_SMS,value:'40 sms',label:'Messages'}],
+    price:4.13},
+  {id:'daily-surf-comfort', name:'Daily Travel Surf Comfort', zones:['top'],
+    attrs:[{icon:ICON_DATA,value:'160 MB',label:'Data'},{icon:ICON_CALL,value:'40 min',label:'Calls'},{icon:ICON_SMS,value:'40 sms',label:'Messages'}],
+    price:4.13},
+  {id:'daily-surf', name:'Daily Travel Surf', zones:['top'],
+    attrs:[{icon:ICON_DATA,value:'160 MB',label:'Data'},{icon:ICON_CALL,value:'40 min',label:'for each outgoing and incoming calls'},{icon:ICON_SMS,value:'40 sms',label:'Messages'}],
+    price:4.13},
 ];
 let dailyRoamingSelected = null;
 
-// ----- Recurring international (radio, single-select) -----
+// ----- Recurring international (radio, single-select, 2-column grid) -----
 const intlOptions = [
-  {id:'voice-boost-60', name:'Voice Boost International 60 min to EU', price:2.00,
-    desc:'60 min International calls to EU only eligible with Mobile Connect Max and Max+'},
-  {id:'intl-calls-sms', name:'International Calls & SMS to EU', price:5.00,
-    desc:'International Calls & SMS to EU'},
+  {id:'voice-boost-60', name:'Voice Boost International 60 min to EU', zones:['eu'],
+    attrs:[{icon:ICON_CALL,value:'60 min',label:'International calls to EU only eligible with Mobile Connect Max and Max+'}],
+    price:2.00},
+  {id:'intl-calls-sms', name:'International Calls & SMS to EU', zones:['eu'],
+    attrs:[{icon:ICON_CALL,value:'500 min',label:'International Calls to EU'},{icon:ICON_SMS,value:'500 sms',label:'International SMS to EU'}],
+    price:5.00},
 ];
 let intlSelected = null;
 
 // ----- Accordions -----
 const optionAccordions = [
-  {id:'data-eu',      title:'Data options in Belgium and EU',           builtOut:false},
-  {id:'roaming',      title:'International and roaming (outside EU) options', builtOut:true},
-  {id:'barrings',     title:'Barrings',                                 builtOut:false},
-  {id:'national-surf',title:'National surf limit',                      builtOut:false},
-  {id:'roaming-surf', title:'Roaming surf limit',                       builtOut:false},
-  {id:'other',        title:'Other services',                           builtOut:false},
+  {id:'data-eu',       title:'Data options in Belgium and EU',                  builtOut:false},
+  {id:'roaming',       title:'International and roaming (outside EU) options',  builtOut:true},
+  {id:'barrings',      title:'Barrings',                                        builtOut:false},
+  {id:'national-surf', title:'National surf limit',                             builtOut:false},
+  {id:'roaming-surf',  title:'Roaming surf limit',                              builtOut:false},
+  {id:'security',      title:'Mobile Security Options',                         builtOut:false},
+  {id:'other',         title:'Other options',                                   builtOut:false},
 ];
 let openAccordions = new Set(['roaming']);
 
@@ -295,18 +338,12 @@ function toggleRoamingFilter(id){
 function toggleRoamingPlan(id){
   if(roamingSelections[id]){
     delete roamingSelections[id];
-    if(roamingStepperOpenId===id) roamingStepperOpenId=null;
   } else {
     roamingSelections[id] = 1;
     // Recurring roaming and Daily roaming are mutually exclusive in the real product:
     // activating a daily option deactivates all other roaming options, and vice versa.
     dailyRoamingSelected = null;
   }
-  renderStep2();
-}
-
-function openStepper(id){
-  roamingStepperOpenId = (roamingStepperOpenId===id) ? null : id;
   renderStep2();
 }
 
@@ -320,7 +357,6 @@ function changeQty(id, delta){
 function selectDaily(id){
   dailyRoamingSelected = id;
   roamingSelections = {};
-  roamingStepperOpenId = null;
   renderStep2();
 }
 
@@ -343,27 +379,32 @@ function roamingLink(label){
   return `<a href="${ROAMING_INFO_URL}" target="_blank" rel="noopener">${label}</a>`;
 }
 
-function roamingRecurringCardHtml(p){
+function zoneLabelFor(zones){
+  const has = z => zones.includes(z);
+  if(has('eu')) return 'Belgium & EU';
+  if(has('top') && has('row')) return 'Top destinations & Rest of the World';
+  if(has('top')) return 'Top destinations';
+  if(has('row')) return 'Rest of the World';
+  return '';
+}
+
+function passesRoamingFilters(item){
+  const active = [...roamingActiveFilters];
+  return active.every(fid => roamingFilterDefs.find(f=>f.id===fid).test(item));
+}
+
+// ----- Card renderers -----
+function roamingComboCardHtml(p){
   const checked = !!roamingSelections[p.id];
   const qty = roamingSelections[p.id] || 1;
   const total = (p.price * qty).toFixed(2);
-  const stepperOpen = roamingStepperOpenId === p.id;
-
-  let belowTitle = '';
-  if(checked){
-    if(stepperOpen){
-      belowTitle = `
-        <div class="qty-stepper" onclick="event.stopPropagation();">
-          <button class="qty-btn${qty>1?' enabled':''}" ${qty<=1?'disabled':''} onclick="changeQty('${p.id}',-1)">${ICON_MINUS}</button>
-          <div class="qty-value">${qty}</div>
-          <button class="qty-btn enabled" ${qty>=20?'disabled':''} onclick="changeQty('${p.id}',1)">${ICON_PLUS}</button>
-          <span class="qty-done" onclick="openStepper('${p.id}')">Done</span>
-        </div>`;
-    } else {
-      belowTitle = `<div class="plan-qty-row">Quantity= ${qty}
-        <a onclick="event.stopPropagation(); openStepper('${p.id}')">Order more</a></div>`;
-    }
-  }
+  const qtyHtml = checked ? `
+    <div class="qty-stepper" onclick="event.stopPropagation();">
+      <span class="qty-label">Quantity</span>
+      <button class="qty-btn${qty>1?' enabled':''}" ${qty<=1?'disabled':''} onclick="changeQty('${p.id}',-1)">${ICON_MINUS}</button>
+      <div class="qty-value">${qty}</div>
+      <button class="qty-btn enabled" ${qty>=20?'disabled':''} onclick="changeQty('${p.id}',1)">${ICON_PLUS}</button>
+    </div>` : '';
 
   return `
   <div class="plan-row roam-row${checked?' selected':''}">
@@ -371,12 +412,14 @@ function roamingRecurringCardHtml(p){
       <div class="plan-header">
         <div class="plan-checkbox${checked?' selected':''}" onclick="toggleRoamingPlan('${p.id}')">${ICON_CHECK}</div>
         <div class="plan-text">
-          <div class="plan-name">${p.name}</div>
+          <div class="plan-name">${p.name}${p.negotiated?'<span class="plan-negotiated inline">Negotiated</span>':''}</div>
+          <div class="plan-available">Available for: ${roamingLink(zoneLabelFor(p.zones))}</div>
         </div>
       </div>
-      ${belowTitle}
+      <div class="plan-attrs-row">${p.attrs.map(attrHtml).join('')}</div>
+      ${qtyHtml}
     </div>
-    <div class="plan-footer">${footerPriceHtml('€'+total, false)}</div>
+    <div class="plan-footer">${footerPriceHtml('€'+total, p.negotiated)}</div>
   </div>`;
 }
 
@@ -387,9 +430,14 @@ function dailyRoamingCardHtml(o){
     <div class="plan-info">
       <div class="plan-header">
         <div class="plan-radio${isSel?' selected':''}"><div class="dot"></div></div>
-        <div class="plan-text"><div class="plan-name">${o.name}</div></div>
+        <div class="plan-text">
+          <div class="plan-name">${o.name}</div>
+          <div class="plan-available">Available for: ${roamingLink(zoneLabelFor(o.zones))}</div>
+        </div>
       </div>
+      <div class="plan-attrs-row">${o.attrs.map(attrHtml).join('')}</div>
     </div>
+    <div class="plan-footer">${footerPriceHtml('€'+o.price.toFixed(2), false, 'day')}</div>
   </div>`;
 }
 
@@ -400,11 +448,33 @@ function intlCardHtml(o){
     <div class="plan-info">
       <div class="plan-header">
         <div class="plan-radio${isSel?' selected':''}"><div class="dot"></div></div>
-        <div class="plan-text"><div class="plan-name">${o.name}</div></div>
+        <div class="plan-text">
+          <div class="plan-name">${o.name}</div>
+          <div class="plan-available">Available for: ${roamingLink(zoneLabelFor(o.zones))}</div>
+        </div>
       </div>
-      <div class="plan-desc">${o.desc}</div>
+      <div class="plan-attrs-row">${o.attrs.map(attrHtml).join('')}</div>
     </div>
     <div class="plan-footer">${footerPriceHtml('€'+o.price.toFixed(2), false)}</div>
+  </div>`;
+}
+
+function zonesInfoCardHtml(){
+  return `
+  <div class="zones-info-card">
+    <div class="zones-info-header">
+      <span class="zones-info-title">Different zones</span>
+      ${roamingLink('View all countries in detail for each zone ↗')}
+    </div>
+    <div class="zones-info-grid">
+      <div class="zones-info-col">
+        <div class="zone-block"><strong>EU Zone</strong><p>Call, text and surf at the same rate as in Belgium.</p></div>
+        <div class="zone-block"><strong>Top destinations</strong><p>Travel to popular destinations outside the EU Zone.</p></div>
+      </div>
+      <div class="zones-info-col">
+        <div class="zone-block"><strong>Rest of the world</strong><p>Travel outside the EU Zone to countries that are not part of top destinations.</p></div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -413,34 +483,50 @@ function roamingAccordionContentHtml(){
     `<div class="chip${roamingActiveFilters.has(f.id)?' active':''}" onclick="toggleRoamingFilter('${f.id}')">${f.label}</div>`
   ).join('');
 
-  const activeF = [...roamingActiveFilters];
-  const filteredRecurring = roamingRecurringPlans.filter(p => activeF.every(fid => roamingFilterDefs.find(f=>f.id===fid).test(p)));
+  const filteredCombo = roamingComboPlans.filter(passesRoamingFilters);
+  const filteredData = roamingDataPlans.filter(passesRoamingFilters);
+  const filteredDaily = dailyRoamingOptions.filter(passesRoamingFilters);
+  const filteredIntl = intlOptions.filter(passesRoamingFilters);
 
-  const recurringHtml = filteredRecurring.length
-    ? `<div class="plan-grid-2col">${filteredRecurring.map(roamingRecurringCardHtml).join('')}</div>`
+  const comboHtml = filteredCombo.length
+    ? filteredCombo.map(roamingComboCardHtml).join('')
+    : `<div class="no-results">No options match the selected filters. Try removing one.</div>`;
+
+  const dataHtml = filteredData.length
+    ? `<div class="plan-grid-2col">${filteredData.map(roamingComboCardHtml).join('')}</div>`
+    : `<div class="no-results">No options match the selected filters. Try removing one.</div>`;
+
+  const dailyHtml = filteredDaily.length
+    ? filteredDaily.map(dailyRoamingCardHtml).join('')
+    : `<div class="no-results">No options match the selected filters. Try removing one.</div>`;
+
+  const intlHtml = filteredIntl.length
+    ? `<div class="plan-grid-2col">${filteredIntl.map(intlCardHtml).join('')}</div>`
     : `<div class="no-results">No options match the selected filters. Try removing one.</div>`;
 
   const dailyDisabled = !dailyRoamingSelected;
 
   return `
-    <p class="section-sub">International options and options for usage outside the EU.</p>
-    <p class="roaming-links">${roamingLink('View all countries in detail for each zone')}</p>
-
-    <div class="section-heading">Recurring roaming</div>
+    ${zonesInfoCardHtml()}
     <div class="chips">${chipsHtml}</div>
-    ${recurringHtml}
+
+    <div class="section-heading">Roaming</div>
+    <p class="section-sub">Roaming means using your mobile services while you're abroad.</p>
+
+    <div class="section-heading">Recurring (monthly) roaming - Data + Voice + SMS</div>
+    ${comboHtml}
+
+    <div class="section-heading">Recurring (monthly) roaming - Only data</div>
+    ${dataHtml}
 
     <div class="section-heading">Daily roaming</div>
-    <span class="deselect-link${dailyDisabled?'':' enabled'}" ${dailyDisabled?'':'onclick="deselectDaily()"'}>Deselect options ${ICON_CHEVRON}</span>
-    <div class="plan-grid-2col" style="margin-top:16px;">
-      ${dailyRoamingOptions.map(dailyRoamingCardHtml).join('')}
-    </div>
+    <span class="deselect-link${dailyDisabled?'':' enabled'}" ${dailyDisabled?'':'onclick="deselectDaily()"'}>Deselect options ${ICON_X}</span>
+    <div style="margin-top:16px;">${dailyHtml}</div>
 
-    <div class="section-heading">Recurring international</div>
-    <span class="deselect-link${intlSelected?' enabled':''}" ${intlSelected?'onclick="deselectIntl()"':''}>Deselect options ${ICON_CHEVRON}</span>
-    <div style="margin-top:16px;">
-      ${intlOptions.map(intlCardHtml).join('')}
-    </div>
+    <div class="section-heading">Recurring (monthly) international</div>
+    <p class="section-sub">International usage lets you contact another country while you're in Belgium.</p>
+    <span class="deselect-link${intlSelected?' enabled':''}" ${intlSelected?'onclick="deselectIntl()"':''}>Deselect options ${ICON_X}</span>
+    <div style="margin-top:16px;">${intlHtml}</div>
 
     <p class="roaming-note">Prices are displayed VAT excluded. Activating a daily roaming option automatically deactivates any recurring roaming options, and vice versa.</p>
   `;
@@ -469,6 +555,7 @@ function renderStep2(){
     <div class="accordion${isOpen?' open':''}">
       <div class="accordion-header" onclick="toggleAccordion('${acc.id}')">
         <span class="acc-title">${acc.title}</span>
+        ${isOpen ? `<span class="accordion-help" title="Roaming lets you use your mobile plan while travelling abroad.">?</span>` : ''}
         <span class="accordion-chevron">${ICON_CHEVRON}</span>
       </div>
       ${isOpen ? `<div class="accordion-content">${accordionContentHtml(acc)}</div>` : ''}
@@ -477,7 +564,6 @@ function renderStep2(){
 
   panel.innerHTML = `
     <h2>Step 2: Options (optional)</h2>
-    <p class="step2-subtitle">In this step you can choose extra options, mobile data roaming options, barrings and set surf limits.</p>
     <div class="accordion-list">${accordionsHtml}</div>
   `;
 }

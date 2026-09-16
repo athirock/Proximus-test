@@ -130,7 +130,10 @@
   }
   .step-circle.current{background:var(--purple);color:#fff;}
   .step-circle.future{background:var(--container);color:var(--text);}
+  .step-circle.completed{background:transparent;color:var(--green);}
+  .step-circle.completed svg{width:24px;height:24px;}
   .step-line{flex:1;height:2px;background:var(--border);}
+  .step-line.done{background:var(--green);}
 
   .panel{background:var(--container);border-radius:var(--radius-main);padding:32px;margin-bottom:24px;}
   .panel.disabled{color:var(--text-dim);}
@@ -214,18 +217,17 @@
 
   .no-results{padding:32px;text-align:center;color:var(--text-dim);font-size:15px;background:#fff;border-radius:var(--radius-main);}
 
-  /* ===== Step 1: confirmed summary card ===== */
-  .step1-summary{
-    display:flex;align-items:flex-start;justify-content:space-between;
-    background:#fff;border-radius:var(--radius-main);padding:20px 24px;
+  /* ===== Step 1: confirmed summary (header row + the real read-only plan card) ===== */
+  .step1-summary-header{
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
   }
-  .step1-summary .step-label{font-size:13px;color:var(--text-dim);margin-bottom:4px;}
-  .step1-summary .step-plan-name{font-size:18px;font-weight:800;color:var(--text);}
-  .step1-summary .modify-link{
+  .step1-summary-header .step-label{font-size:14px;color:var(--text-dim);}
+  .step1-summary-header .modify-link{
     display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--purple);
     text-decoration:none;cursor:pointer;font-size:14px;white-space:nowrap;
   }
-  .step1-summary .modify-link svg{width:14px;height:14px;}
+  .step1-summary-header .modify-link svg{width:14px;height:14px;}
+  .plan-row.readonly{cursor:default;}
   .step1-error{color:#c0392b;font-size:14px;margin-top:8px;}
 
   /* ===== Step 2: accordions ===== */
@@ -238,6 +240,11 @@
     font-weight:700;font-size:16px;color:var(--purple);user-select:none;
   }
   .accordion-header .acc-title{flex:1;}
+  .accordion-help{
+    width:22px;height:22px;border-radius:50%;border:2px solid var(--text-dim);color:var(--text-dim);
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+    margin-right:4px;cursor:help;flex-shrink:0;
+  }
   .accordion-chevron{
     width:24px;height:24px;border-radius:var(--radius-pill);background:var(--purple-tint);
     display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s ease;
@@ -250,13 +257,23 @@
     padding:16px;color:var(--text-dim);font-size:14px;
   }
 
-  .section-heading{font-weight:700;font-size:16px;margin:24px 0 4px;}
+  /* "Different zones" info card */
+  .zones-info-card{background:#fff;border-radius:var(--radius-main);padding:20px 24px;margin-bottom:20px;}
+  .zones-info-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+  .zones-info-title{font-weight:800;color:var(--purple);font-size:16px;}
+  .zones-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .zone-block{margin-bottom:14px;}
+  .zone-block:last-child{margin-bottom:0;}
+  .zone-block strong{display:block;font-size:15px;margin-bottom:2px;}
+  .zone-block p{margin:0;font-size:14px;color:var(--text-dim);}
+  @media (max-width:720px){ .zones-info-grid{grid-template-columns:1fr;} }
+
+  .section-heading{font-weight:700;font-size:16px;margin:24px 0 12px;}
   .section-heading:first-child{margin-top:0;}
-  .section-sub{font-size:14px;color:var(--text-dim);margin:0 0 16px;}
-  .roaming-links{font-size:14px;color:var(--text-dim);margin:0 0 20px;}
+  .section-sub{font-size:14px;color:var(--text-dim);margin:0 0 12px;}
   .deselect-link{font-size:14px;font-weight:700;color:var(--text-dim);cursor:default;display:inline-flex;align-items:center;gap:4px;}
   .deselect-link.enabled{color:var(--purple);cursor:pointer;}
-  .deselect-link svg{width:14px;height:14px;}
+  .deselect-link svg{width:12px;height:12px;}
 
   /* checkbox-selection cards (recurring roaming) */
   .plan-checkbox{
@@ -269,10 +286,11 @@
   .plan-checkbox.selected svg{opacity:1;}
   .roam-row:hover .plan-checkbox{border-color:var(--purple);}
 
-  .plan-qty-row{margin-top:8px;padding-left:40px;font-size:14px;color:var(--text-dim);}
-  .plan-qty-row a{cursor:pointer;}
+  .plan-available{font-size:13px;color:var(--text-dim);margin-top:2px;}
+  .plan-negotiated.inline{margin-left:8px;display:inline-block;}
 
-  .qty-stepper{display:flex;align-items:center;gap:8px;margin-top:8px;padding-left:40px;}
+  .qty-stepper{display:flex;align-items:center;gap:8px;margin-top:12px;padding-left:40px;}
+  .qty-label{font-size:14px;font-weight:700;margin-right:4px;}
   .qty-btn{
     width:40px;height:40px;border-radius:var(--radius-pill);border:none;cursor:pointer;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.04);color:rgba(0,0,0,.3);
@@ -281,10 +299,6 @@
   .qty-btn.enabled{background:var(--purple);color:#fff;}
   .qty-btn:disabled{cursor:not-allowed;}
   .qty-value{background:rgba(0,0,0,.08);border-radius:5px;padding:8px 20px;font-weight:700;font-size:16px;min-width:24px;text-align:center;}
-  .qty-done{font-size:13px;font-weight:700;color:var(--purple);cursor:pointer;margin-left:4px;}
-
-  /* radio cards with description (daily roaming / recurring international) */
-  .plan-desc{font-size:14px;color:var(--text-dim);margin-top:4px;padding-left:40px;}
 
   .roaming-note{font-size:13px;color:var(--text-dim);margin-top:16px;}
 
